@@ -77,6 +77,36 @@ function normalizeStudent(body) {
   return student;
 }
 
+function extractValue(text, labels, stopLabels) {
+  for (const label of labels) {
+    const labelPattern = label.replace(/\s+/g, "\\s+");
+    const stopPattern = stopLabels
+      .filter((stopLabel) => stopLabel !== label)
+      .map((stopLabel) => stopLabel.replace(/\s+/g, "\\s+"))
+      .join("|");
+    const regex = new RegExp(
+      `${labelPattern}\\s*[:=-]?\\s*(.+?)(?=\\s+(?:${stopPattern})\\s*[:=-]?|$)`,
+      "i"
+    );
+    const match = text.match(regex);
+    if (match) {
+      return match[1].trim().replace(/[,.]$/, "");
+    }
+  }
+
+  return "";
+}
+
+function parseStudentFromAgentMessage(message) {
+  const text = String(message || "").trim();
+  const labels = ["name", "student name", "roll", "roll no", "roll number", "class", "grade"];
+  const name = extractValue(text, ["student name", "name"], labels);
+  const rollNo = extractValue(text, ["roll number", "roll no", "roll"], labels);
+  const className = extractValue(text, ["class", "grade"], labels);
+
+  return normalizeStudent({ name, rollNo, className });
+}
+
 function sendJson(res, statusCode, data) {
   const body = JSON.stringify(data);
   res.writeHead(statusCode, {
@@ -202,6 +232,36 @@ async function handleApi(req, res, url) {
     } catch (error) {
       if (String(error.message || "").includes("UNIQUE constraint failed")) {
         return sendJson(res, 409, { error: "Student email already exists." });
+      }
+      return sendJson(res, 400, { error: error.message || "Bad request" });
+    }
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/agent") {
+    try {
+      const body = await parseJsonBody(req);
+      const message = String(body.message || "").trim();
+
+      if (!message) {
+        return sendJson(res, 400, { error: "Message is required." });
+      }
+
+      const student = parseStudentFromAgentMessage(message);
+      if (!student) {
+        return sendJson(res, 200, {
+          reply:
+            "Please send student details like: add student name: Rahul Sharma roll: 101 class: 10 A"
+        });
+      }
+
+      const created = createStudent(student);
+      return sendJson(res, 201, {
+        reply: `Added ${created.name} to class ${created.className} with roll number ${created.rollNo}.`,
+        student: created
+      });
+    } catch (error) {
+      if (String(error.message || "").includes("UNIQUE constraint failed")) {
+        return sendJson(res, 409, { error: "A student with this roll/email already exists." });
       }
       return sendJson(res, 400, { error: error.message || "Bad request" });
     }

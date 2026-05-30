@@ -23,6 +23,13 @@ function App() {
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [agentInput, setAgentInput] = useState("");
+  const [agentMessages, setAgentMessages] = useState([
+    {
+      role: "agent",
+      text: "Hi, send student details like: add student name: Rahul Sharma roll: 101 class: 10 A"
+    }
+  ]);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -163,6 +170,32 @@ function App() {
   function handleCancelEdit() {
     setEditingId(null);
     setStudentForm(emptyForm);
+  }
+
+  async function handleAgentSubmit(event) {
+    event.preventDefault();
+    const text = agentInput.trim();
+    if (!text) {
+      return;
+    }
+
+    setAgentInput("");
+    setAgentMessages((current) => [...current, { role: "user", text }]);
+
+    try {
+      const data = await requestJson("/api/agent", {
+        method: "POST",
+        body: JSON.stringify({ message: text })
+      });
+
+      setAgentMessages((current) => [...current, { role: "agent", text: data.reply }]);
+      if (data.student) {
+        setMessage("Agent added student to database.");
+        await loadStudents();
+      }
+    } catch (error) {
+      setAgentMessages((current) => [...current, { role: "agent", text: error.message }]);
+    }
   }
 
   if (!isLoggedIn) {
@@ -319,6 +352,30 @@ function App() {
               )}
             </div>
           </form>
+
+          <section className="agent-panel">
+            <div className="section-heading">
+              <p className="eyebrow">Agent</p>
+              <h2>Student Agent Chat</h2>
+            </div>
+
+            <div className="chat-box">
+              {agentMessages.map((chat, index) => (
+                <div className={`chat-message ${chat.role}`} key={`${chat.role}-${index}`}>
+                  {chat.text}
+                </div>
+              ))}
+            </div>
+
+            <form className="agent-form" onSubmit={handleAgentSubmit}>
+              <textarea
+                value={agentInput}
+                onChange={(event) => setAgentInput(event.target.value)}
+                placeholder="add student name: Priya Patel roll: 220 class: 10 B"
+              />
+              <button type="submit">Send to Agent</button>
+            </form>
+          </section>
 
           <section className="table-section" id="students">
             <div className="table-header">
