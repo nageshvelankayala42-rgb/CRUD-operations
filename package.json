@@ -1,0 +1,13 @@
+{
+  "name": "student-crud-react",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Student CRUD dashboard with React frontend, Node server, and SQLite database.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -37,3 +37,14 @@ The database file is created automatically:
 ```text
 students.db
 ```
+
+## Deploy
+
+This project needs Node hosting because it has API routes and SQLite database logic.
+
+Recommended Render settings:
+
+```text
+Build Command: npm install
+Start Command: npm start
+```

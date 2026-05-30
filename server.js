@@ -4,7 +4,7 @@ const path = require("node:path");
 const { URL } = require("node:url");
 const { DatabaseSync } = require("node:sqlite");
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const DB_PATH = path.join(ROOT, "students.db");
 

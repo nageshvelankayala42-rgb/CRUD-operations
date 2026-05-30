@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: student-crud-react
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
