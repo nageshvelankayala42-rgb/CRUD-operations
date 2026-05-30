@@ -24,10 +24,11 @@ function App() {
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [agentInput, setAgentInput] = useState("");
+  const [isListening, setIsListening] = useState(false);
   const [agentMessages, setAgentMessages] = useState([
     {
       role: "agent",
-      text: "Hi, send student details like: add student name: Rahul Sharma roll: 101 class: 10 A"
+      text: "Hi, click Start Voice Call and say: add student name Rahul Sharma roll 101 class 10 A"
     }
   ]);
 
@@ -174,7 +175,11 @@ function App() {
 
   async function handleAgentSubmit(event) {
     event.preventDefault();
-    const text = agentInput.trim();
+    await sendAgentMessage(agentInput);
+  }
+
+  async function sendAgentMessage(messageText) {
+    const text = messageText.trim();
     if (!text) {
       return;
     }
@@ -189,6 +194,7 @@ function App() {
       });
 
       setAgentMessages((current) => [...current, { role: "agent", text: data.reply }]);
+      speakAgentReply(data.reply);
       if (data.student) {
         setMessage("Agent added student to database.");
         await loadStudents();
@@ -196,6 +202,50 @@ function App() {
     } catch (error) {
       setAgentMessages((current) => [...current, { role: "agent", text: error.message }]);
     }
+  }
+
+  function speakAgentReply(text) {
+    if (!("speechSynthesis" in window)) {
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.95;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function startVoiceCall() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      const reply = "Voice input is not supported in this browser. Please use Chrome or Edge.";
+      setAgentMessages((current) => [...current, { role: "agent", text: reply }]);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    setIsListening(true);
+    recognition.start();
+
+    recognition.onresult = async (event) => {
+      const spokenText = event.results[0][0].transcript;
+      await sendAgentMessage(spokenText);
+    };
+
+    recognition.onerror = () => {
+      const reply = "I could not hear clearly. Please try again.";
+      setAgentMessages((current) => [...current, { role: "agent", text: reply }]);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
   }
 
   if (!isLoggedIn) {
@@ -355,8 +405,8 @@ function App() {
 
           <section className="agent-panel">
             <div className="section-heading">
-              <p className="eyebrow">Agent</p>
-              <h2>Student Agent Chat</h2>
+              <p className="eyebrow">Voice Agent</p>
+              <h2>Talk to Agent</h2>
             </div>
 
             <div className="chat-box">
@@ -367,11 +417,19 @@ function App() {
               ))}
             </div>
 
+            <button
+              className={isListening ? "voice-button listening" : "voice-button"}
+              type="button"
+              onClick={startVoiceCall}
+            >
+              {isListening ? "Listening..." : "Start Voice Call"}
+            </button>
+
             <form className="agent-form" onSubmit={handleAgentSubmit}>
               <textarea
                 value={agentInput}
                 onChange={(event) => setAgentInput(event.target.value)}
-                placeholder="add student name: Priya Patel roll: 220 class: 10 B"
+                placeholder="Or type: add student name Priya Patel roll 220 class 10 B"
               />
               <button type="submit">Send to Agent</button>
             </form>

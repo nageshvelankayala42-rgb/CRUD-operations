@@ -451,6 +451,20 @@ textarea:focus {
   min-height: 78px;
 }
 
+.voice-button {
+  background: #101828;
+  width: 100%;
+}
+
+.voice-button:hover {
+  background: #26344d;
+}
+
+.voice-button.listening {
+  background: #dc2626;
+  box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.16);
+}
+
 .table-header {
   align-items: center;
   display: flex;
